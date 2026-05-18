@@ -585,3 +585,92 @@ function seedSampleData() {
 
   Logger.log('✅ Sample data seeded!')
 }
+
+// ─── NEW: CONFIRM REPLACEMENT ─────────────────────────────────────────────────
+function confirmReplacement(sheetId, data) {
+  const { assignmentId, newStudentId } = data
+  const sheet = getSheet(sheetId, SHEETS.DUTIES)
+  const rows  = sheet.getDataRange().getValues()
+
+  let dutyRow = null, dutyIdx = -1
+  for (let i = 1; i < rows.length; i++) {
+    if (rows[i][0] === assignmentId) { dutyRow = rows[i]; dutyIdx = i; break }
+  }
+  if (!dutyIdx || !dutyRow) return false
+
+  const oldStudentId = dutyRow[4]
+  const wasP = dutyRow[8] === 'Pending'
+
+  // Get new student details
+  const students = getStudents(sheetId, {})
+  const newS = students.find(s => s.id === newStudentId)
+  if (!newS) return false
+
+  // Restore old student pending count
+  if (wasP) bumpStudentField(sheetId, oldStudentId, 8, -1)
+
+  // Update the duty row
+  sheet.getRange(dutyIdx + 1, 5).setValue(newS.id)
+  sheet.getRange(dutyIdx + 1, 6).setValue(newS.name)
+  sheet.getRange(dutyIdx + 1, 7).setValue(newS.class)
+
+  // Bump new student pending count
+  if (wasP) bumpStudentField(sheetId, newStudentId, 8, 1)
+
+  return true
+}
+
+// ─── NEW: CLEAR RECORDS ───────────────────────────────────────────────────────
+function clearRecords(sheetId, data) {
+  // 1. Read all duties for archive
+  const dutiesSheet = getSheet(sheetId, SHEETS.DUTIES)
+  const archived = sheetToObjects(dutiesSheet)
+
+  // 2. Compute class averages and balances
+  const students = getStudents(sheetId, {})
+  const active   = students.filter(s => s.status !== 'Inactive')
+  const classes  = [...new Set(active.map(s => s.class.split('-')[0]))]
+  const balances = {}
+
+  classes.forEach(cls => {
+    const members = active.filter(s => s.class.startsWith(cls))
+    if (!members.length) return
+    const avg = members.reduce((acc, s) => acc + s.effectiveCount, 0) / members.length
+    members.forEach(s => {
+      balances[s.id] = s.effectiveCount - Math.round(avg) // positive = ahead, negative = behind
+    })
+  })
+
+  // 3. Reset all student counts; apply balance credit for those who were ahead
+  const studSheet = getSheet(sheetId, SHEETS.STUDENTS)
+  const studRows  = studSheet.getDataRange().getValues()
+  for (let i = 1; i < studRows.length; i++) {
+    const sid = studRows[i][0]
+    const bal = balances[sid] || 0
+    studSheet.getRange(i + 1, 6).setValue(0)  // CompletedCount
+    studSheet.getRange(i + 1, 7).setValue(bal < 0 ? bal : 0) // ManualCredit: negative if behind (not helpful), or 0
+    // Students who were AHEAD get no extra credit (they just start at 0 and will be lower priority)
+    // Students who were BEHIND also start at 0 but since everyone resets, generation picks lowest-count first
+    // Actually: give ahead students negative credit so they're deprioritised
+    studSheet.getRange(i + 1, 7).setValue(bal > 0 ? -bal : 0) // Penalise ahead students
+    studSheet.getRange(i + 1, 8).setValue(0)  // PendingCount
+    studSheet.getRange(i + 1, 9).setValue(0)  // UpcomingCount
+    studSheet.getRange(i + 1, 10).setValue('') // LastDutyDate
+  }
+
+  // 4. Clear duties sheet (keep header)
+  const lastRow = dutiesSheet.getLastRow()
+  if (lastRow > 1) dutiesSheet.deleteRows(2, lastRow - 1)
+
+  // 5. Clear credits sheet
+  const credSheet = getSheet(sheetId, SHEETS.CREDITS)
+  const credLast  = credSheet.getLastRow()
+  if (credLast > 1) credSheet.deleteRows(2, credLast - 1)
+
+  // 6. Clear area history
+  const histSheet = getSheet(sheetId, SHEETS.AREA_HISTORY)
+  const histLast  = histSheet.getLastRow()
+  if (histLast > 1) histSheet.deleteRows(2, histLast - 1)
+
+  return { archived: archived.length, balances }
+}

@@ -283,36 +283,34 @@ const MOCK = (() => {
           }
 
           case 'clearRecords': {
-            // Compute class averages, apply balance credits, clear duty history
-            const active = db.students.filter(s => s.status !== 'Inactive')
-            const classes = [...new Set(active.map(s => s.class.split('-')[0]))]
-            const balances = {}
-            classes.forEach(cls => {
-              const members = active.filter(s => s.class.startsWith(cls))
-              if (!members.length) return
-              const avg = members.reduce((acc, s) => acc + eff(s), 0) / members.length
-              members.forEach(s => {
-                balances[s.id] = Math.round(avg - eff(s)) // positive = owed duties, negative = excess
-              })
-            })
-            // Archive duties snapshot (returned to caller for download)
+            const clearMode = data.mode || 'balanced'
             const archive = [...db.duties]
-            // Reset
-            db.students.forEach(s => {
-              s.completedCount = 0
-              s.manualCredit   = Math.max(0, balances[s.id] || 0) === 0
-                ? (balances[s.id] < 0 ? balances[s.id] : 0) // negative balance = they were ahead, give them a head-start
-                : 0
-              // If student was behind average, their effectiveCount stays 0 (they'll get duties first)
-              // If student was ahead, give negative credit so others catch up
-              s.manualCredit   = balances[s.id] < 0 ? balances[s.id] : 0
-              s.pendingCount   = 0
-              s.lastDutyDate   = null
-            })
-            db.duties  = []
-            db.credits = []
+            if (clearMode === 'balanced') {
+              const active = db.students.filter(s => s.status !== 'Inactive')
+              const classes = [...new Set(active.map(s => s.class.split('-')[0]))]
+              const balances = {}
+              classes.forEach(cls => {
+                const members = active.filter(s => s.class.startsWith(cls))
+                if (!members.length) return
+                const avg = members.reduce((acc, s) => acc + eff(s), 0) / members.length
+                members.forEach(s => { balances[s.id] = eff(s) - Math.round(avg) })
+              })
+              db.students.forEach(s => {
+                const b = balances[s.id] || 0
+                s.completedCount = 0
+                s.manualCredit   = b > 0 ? -b : 0  // ahead students get penalty
+                s.pendingCount   = 0
+                s.lastDutyDate   = null
+              })
+            } else {
+              // complete — zero everything
+              db.students.forEach(s => {
+                s.completedCount = 0; s.manualCredit = 0; s.pendingCount = 0; s.lastDutyDate = null
+              })
+            }
+            db.duties = []; db.credits = []
             save(db)
-            return { archived: archive, balances }
+            return { archived: archive.length }
           }
 
           default: throw new Error('Unknown action: ' + action)

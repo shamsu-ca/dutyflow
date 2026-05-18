@@ -1,0 +1,47 @@
+:root {
+  --clr-primary:            #003527;
+  --clr-on-primary:         #ffffff;
+  --clr-primary-container:  #064e3b;
+  --clr-on-primary-cont:    #80bea6;
+  --clr-primary-fixed:      #b0f0d6;
+  --clr-primary-fixed-dim:  #95d3ba;
+  --clr-on-primary-fixed:   #002117;
+  --clr-secondary:          #515f74;
+  --clr-secondary-container:#d5e3fc;
+  --clr-on-secondary-cont:  #57657a;
+  --clr-surface:            #f8faf6;
+  --clr-surface-low:        #f2f4f1;
+  --clr-surface-container:  #eceeeb;
+  --clr-surface-high:       #e7e9e5;
+  --clr-surface-highest:    #e1e3e0;
+  --clr-surface-white:      #ffffff;
+  --clr-on-surface:         #191c1b;
+  --clr-on-surface-var:     #404944;
+  --clr-outline:            #707974;
+  --clr-outline-var:        #bfc9c3;
+  --clr-error:              #ba1a1a;
+  --clr-error-container:    #ffdad6;
+  --clr-on-error-cont:      #93000a;
+  --clr-inverse-surface:    #2e312f;
+  --clr-inverse-on-surface: #eff1ee;
+  --sp-xs:4px; --sp-sm:8px; --sp-md:16px; --sp-lg:24px; --sp-xl:32px;
+  --sp-margin:16px; --touch:48px;
+  --r-sm:4px; --r:8px; --r-md:12px; --r-lg:16px; --r-xl:24px; --r-full:9999px;
+  --sh-card:0 2px 8px rgba(0,0,0,0.04),0 1px 2px rgba(0,0,0,0.02);
+  --sh-md:0 4px 16px rgba(0,0,0,0.07);
+  --sh-lg:0 8px 32px rgba(0,0,0,0.10);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{font-size:16px;scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--clr-surface);color:var(--clr-on-surface);min-height:100dvh;overscroll-behavior:none;-webkit-font-smoothing:antialiased}
+#root{min-height:100dvh}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--clr-outline-var);border-radius:4px}
+.msym{font-family:'Material Symbols Outlined';font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;font-size:24px;display:inline-flex;align-items:center;line-height:1;user-select:none}
+.msym.fill{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24}
+.msym.sm{font-size:18px}.msym.xs{font-size:16px}
+.hide-scroll{scrollbar-width:none}.hide-scroll::-webkit-scrollbar{display:none}
+.ellipsis{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.page-enter{animation:pageIn 0.18s ease both}
+@keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
